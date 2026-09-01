@@ -1,0 +1,26 @@
+{
+  "name": "kisan-pehele-platform",
+  "version": "1.0.0",
+  "description": "Kisan Pehele — Farmer Procurement Transparency & Queue Intelligence Platform",
+  "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev:api": "npm run start:dev --workspace=@kisan-pehele/api",
+    "dev:web": "npm run dev --workspace=@kisan-pehele/web",
+    "build": "npm run build --workspaces --if-present",
+    "test": "npm run test --workspaces --if-present",
+    "seed": "npm run prisma:seed --workspace=@kisan-pehele/api"
+  },
+  "keywords": [
+    "kisan-pehele",
+    "procurement",
+    "queue-intelligence",
+    "farmer-first",
+    "sih26032"
+  ],
+  "author": "Kisan Pehele Engineering Team",
+  "license": "MIT"
+}

@@ -1,0 +1,322 @@
+// =================================================================
+// Kisan Pehele — Database Schema (Prisma)
+// "Pehle pata, phir mandi."
+// =================================================================
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                String          @id @default(uuid())
+  mobile            String          @unique
+  name              String
+  passwordHash      String
+  role              String          @default("FARMER") // FARMER, TRUSTED_HELPER, OFFICER, DISTRICT_ADMIN, STATE_ADMIN, AUDITOR, SUPER_ADMIN
+  preferredLanguage String          @default("hi")
+  state             String          @default("Odisha")
+  district          String          @default("Balasore")
+  isActive          Boolean         @default(true)
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+
+  farmerProfile     FarmerProfile?
+  officerCenter     ProcurementCenter? @relation("OfficerCenter")
+  bookings          Booking[]
+  procurementCases  ProcurementCase[]
+  verifications     Verification[]
+  inspections       Inspection[]
+  auditLogs         AuditLog[]
+  notifications     Notification[]
+  helperAuthorizations TrustedHelper[] @relation("FarmerHelpers")
+  helperAssignments    TrustedHelper[] @relation("HelperUser")
+}
+
+model FarmerProfile {
+  id                 String   @id @default(uuid())
+  userId             String   @unique
+  user               User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  aadhaarLast4       String?
+  landHoldingAcres   Float    @default(2.5)
+  kisanCreditCard    String?
+  village            String   @default("Kalyanpur")
+  pincode            String   @default("756001")
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+}
+
+model TrustedHelper {
+  id           String    @id @default(uuid())
+  farmerId     String
+  farmer       User      @relation("FarmerHelpers", fields: [farmerId], references: [id], onDelete: Cascade)
+  helperUserId String
+  helper       User      @relation("HelperUser", fields: [helperUserId], references: [id], onDelete: Cascade)
+  relationship String    @default("Family Member")
+  permissions  String    @default("VIEW_AND_BOOK")
+  consentGiven Boolean   @default(true)
+  isRevoked    Boolean   @default(false)
+  createdAt    DateTime  @default(now())
+  revokedAt    DateTime?
+}
+
+model Crop {
+  id               String          @id @default(uuid())
+  code             String          @unique
+  nameEn           String
+  nameHi           String
+  nameRegional     String?
+  category         String          @default("CEREAL")
+  minSupportPrice  Float           @default(2183.0) // Rupees per quintal (MSP)
+  standardUnit     String          @default("Quintal")
+  season           String          @default("Kharif 2026")
+  isActive         Boolean         @default(true)
+  createdAt        DateTime        @default(now())
+
+  schedules        ProcurementSchedule[]
+  bookings         Booking[]
+  procurementCases ProcurementCase[]
+  centerSupports   CenterCropSupport[]
+}
+
+model ProcurementCenter {
+  id                        String              @id @default(uuid())
+  code                      String              @unique
+  name                      String
+  district                  String
+  state                     String
+  address                   String
+  lat                       Float               @default(21.4934)
+  lng                       Float               @default(86.9135)
+  operatingHours            String              @default("08:00 AM - 05:00 PM")
+  maxDailyCapacityQuintals  Float               @default(500.0)
+  currentStatus             String              @default("ACTIVE") // ACTIVE, LIMITED_CAPACITY, PAUSED, CLOSED
+  statusReason              String?
+  activeCounters            Int                 @default(3)
+  contactNumber             String              @default("+91 9876543210")
+  officerInChargeId         String?             @unique
+  officerInCharge           User?               @relation("OfficerCenter", fields: [officerInChargeId], references: [id])
+  createdAt                 DateTime            @default(now())
+  updatedAt                 DateTime            @updatedAt
+
+  cropSupports              CenterCropSupport[]
+  schedules                 ProcurementSchedule[]
+  bookings                  Booking[]
+  tokens                    Token[]
+  procurementCases          ProcurementCase[]
+  queueEvents               QueueEvent[]
+}
+
+model CenterCropSupport {
+  id        String            @id @default(uuid())
+  centerId  String
+  center    ProcurementCenter @relation(fields: [centerId], references: [id], onDelete: Cascade)
+  cropId    String
+  crop      Crop              @relation(fields: [cropId], references: [id], onDelete: Cascade)
+  isActive  Boolean           @default(true)
+
+  @@unique([centerId, cropId])
+}
+
+model ProcurementSchedule {
+  id                       String            @id @default(uuid())
+  centerId                 String
+  center                   ProcurementCenter @relation(fields: [centerId], references: [id], onDelete: Cascade)
+  cropId                   String
+  crop                     Crop              @relation(fields: [cropId], references: [id], onDelete: Cascade)
+  date                     String            // YYYY-MM-DD
+  startTime                String            @default("08:30")
+  endTime                  String            @default("16:30")
+  totalSlots               Int               @default(24)
+  slotDurationMinutes      Int               @default(20)
+  capacityPerSlotQuintals  Float             @default(25.0)
+  status                   String            @default("PUBLISHED") // DRAFT, PUBLISHED, PAUSED, CLOSED
+  createdAt                DateTime          @default(now())
+  updatedAt                DateTime          @updatedAt
+
+  bookings                 Booking[]
+
+  @@unique([centerId, cropId, date])
+}
+
+model Booking {
+  id                        String              @id @default(uuid())
+  bookingNumber             String              @unique
+  idempotencyKey            String?             @unique
+  farmerId                  String
+  farmer                    User                @relation(fields: [farmerId], references: [id], onDelete: Cascade)
+  centerId                  String
+  center                    ProcurementCenter   @relation(fields: [centerId], references: [id], onDelete: Cascade)
+  scheduleId                String
+  schedule                  ProcurementSchedule @relation(fields: [scheduleId], references: [id], onDelete: Cascade)
+  cropId                    String
+  crop                      Crop                @relation(fields: [cropId], references: [id], onDelete: Cascade)
+  estimatedQuantityQuintals Float               @default(20.0)
+  slotTime                  String              // e.g. "09:00 AM - 09:20 AM"
+  status                    String              @default("CONFIRMED") // CONFIRMED, CANCELLED, RESCHEDULED, COMPLETED, NO_SHOW
+  vehicleType               String              @default("TRACTOR_TROLLEY")
+  vehicleNumber             String              @default("OD-01-AB-1234")
+  helperId                  String?
+  createdAt                 DateTime            @default(now())
+  updatedAt                 DateTime            @updatedAt
+
+  token                     Token?
+  procurementCase           ProcurementCase?
+}
+
+model Token {
+  id                   String            @id @default(uuid())
+  tokenNumber          String            // e.g. "A-101", "A-142"
+  bookingId            String            @unique
+  booking              Booking           @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  centerId             String
+  center               ProcurementCenter @relation(fields: [centerId], references: [id], onDelete: Cascade)
+  sequenceNumber       Int               @default(1)
+  status               String            @default("ISSUED") // ISSUED, ARRIVED, CALLED, SERVING, COMPLETED, EXPIRED, SKIPPED
+  recommendedArrival   String            // e.g. "08:45 AM"
+  estimatedWaitMinutes Int               @default(25)
+  calledAt             DateTime?
+  servingAt            DateTime?
+  completedAt          DateTime?
+  createdAt            DateTime          @default(now())
+  updatedAt            DateTime          @updatedAt
+
+  queueEvents          QueueEvent[]
+}
+
+model QueueEvent {
+  id                   String            @id @default(uuid())
+  centerId             String
+  center               ProcurementCenter @relation(fields: [centerId], references: [id], onDelete: Cascade)
+  tokenId              String
+  token                Token             @relation(fields: [tokenId], references: [id], onDelete: Cascade)
+  eventType            String            // ARRIVAL, CALLED, SERVING, ADVANCED, COMPLETED, NO_SHOW
+  previousPosition     Int
+  newPosition          Int
+  estimatedWaitMinutes Int
+  createdAt            DateTime          @default(now())
+}
+
+model ProcurementCase {
+  id             String            @id @default(uuid())
+  caseNumber     String            @unique
+  bookingId      String            @unique
+  booking        Booking           @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  farmerId       String
+  farmer         User              @relation(fields: [farmerId], references: [id], onDelete: Cascade)
+  centerId       String
+  center         ProcurementCenter @relation(fields: [centerId], references: [id], onDelete: Cascade)
+  cropId         String
+  crop           Crop              @relation(fields: [cropId], references: [id], onDelete: Cascade)
+  currentStatus  String            @default("SCHEDULED") // REGISTERED, SCHEDULED, ARRIVED, VERIFICATION, INSPECTION, ACCEPTED, REJECTED, PROCUREMENT_COMPLETED, PAYMENT_PROCESSING, PAID, PAYMENT_FAILED
+  rejectionReason String?
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+
+  verification   Verification?
+  inspection     Inspection?
+  paymentRecord  PaymentRecord?
+}
+
+model Verification {
+  id                String          @id @default(uuid())
+  procurementCaseId String          @unique
+  procurementCase   ProcurementCase @relation(fields: [procurementCaseId], references: [id], onDelete: Cascade)
+  officerId         String
+  officer           User            @relation(fields: [officerId], references: [id])
+  isVerified        Boolean         @default(true)
+  verificationNotes String?
+  farmerPhotoVerified Boolean       @default(true)
+  landRecordMatched   Boolean       @default(true)
+  verifiedAt        DateTime        @default(now())
+}
+
+model Inspection {
+  id                         String          @id @default(uuid())
+  procurementCaseId          String          @unique
+  procurementCase            ProcurementCase @relation(fields: [procurementCaseId], references: [id], onDelete: Cascade)
+  officerId                  String
+  officer                    User            @relation(fields: [officerId], references: [id])
+  measuredMoisturePercent    Float           @default(14.2) // Standard threshold is typically <= 17%
+  foreignMatterPercent       Float           @default(0.8)
+  qualityGrade               String          @default("GRADE_A") // GRADE_A, GRADE_B, GRADE_C, FAQ_STANDARD, BELOW_STANDARD
+  weighedQuantityQuintals    Float           @default(20.0)
+  deductionQuintals          Float           @default(0.0)
+  netProcuredQuantityQuintals Float          @default(20.0)
+  inspectionNotes            String?
+  inspectedAt                DateTime        @default(now())
+}
+
+model PaymentRecord {
+  id                   String          @id @default(uuid())
+  procurementCaseId    String          @unique
+  procurementCase      ProcurementCase @relation(fields: [procurementCaseId], references: [id], onDelete: Cascade)
+  mspRatePerQuintal    Float           @default(2183.0)
+  grossAmountRupees    Float           @default(43660.0)
+  deductionsRupees     Float           @default(0.0)
+  netPayableRupees     Float           @default(43660.0)
+  paymentStatus        String          @default("PAYMENT_PROCESSING") // PAYMENT_PROCESSING, PAID, PAYMENT_FAILED
+  transactionReference String?
+  bankAccountMasked    String          @default("XXXX-XXXX-4921")
+  ifscMasked           String          @default("SBIN0001234")
+  processedAt          DateTime?
+  createdAt            DateTime        @default(now())
+  updatedAt            DateTime        @updatedAt
+}
+
+model Notification {
+  id             String    @id @default(uuid())
+  userId         String
+  user           User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  channel        String    @default("IN_APP") // IN_APP, SMS, IVR, PUSH
+  title          String
+  message        String
+  language       String    @default("hi")
+  isRead         Boolean   @default(false)
+  deliveryStatus String    @default("DELIVERED") // SENT, DELIVERED, FAILED
+  metadataJson   String?
+  createdAt      DateTime  @default(now())
+}
+
+model AuditLog {
+  id               String   @id @default(uuid())
+  actorId          String?
+  actor            User?    @relation(fields: [actorId], references: [id], onDelete: SetNull)
+  actorRole        String   @default("SYSTEM")
+  action           String   // e.g. "PROCUREMENT_TRANSITION", "CENTER_STATUS_OVERRIDE", "QUEUE_ADVANCE"
+  entityName       String   // e.g. "ProcurementCase", "ProcurementCenter", "Token"
+  entityId         String
+  previousStateJson String?
+  newStateJson     String?
+  reason           String?
+  ipAddress        String   @default("127.0.0.1")
+  userAgent        String   @default("KisanPehele/1.0")
+  createdAt        DateTime @default(now())
+}
+
+model PredictionLog {
+  id                    String   @id @default(uuid())
+  predictionType        String   // WAIT_TIME, DEMAND_FORECAST, CENTER_RECOMMENDATION, VOICE_INTENT
+  centerId              String?
+  inputParametersJson   String
+  predictedValueJson    String
+  confidence            Float    @default(0.85)
+  modelVersion          String   @default("v1.4-hybrid-rule")
+  fallbackUsed          Boolean  @default(false)
+  createdAt             DateTime @default(now())
+}
+
+model IVRCallLog {
+  id                  String   @id @default(uuid())
+  callerNumber        String
+  language            String   @default("hi")
+  selectedOption      String?
+  intentDetected      String?
+  responseText        String
+  callDurationSeconds Int      @default(35)
+  createdAt           DateTime @default(now())
+}
