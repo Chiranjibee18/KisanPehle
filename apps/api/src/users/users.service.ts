@@ -1,6 +1,7 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../database/prisma.service';
 import { AuditService } from '../audit/audit.service';
+import { EncryptionService } from '../common/encryption.service';
 import * as bcrypt from 'bcryptjs';
 
 export interface UpdateProfileDto {
@@ -24,6 +25,7 @@ export class UsersService {
   constructor(
     private prisma: PrismaService,
     private auditService: AuditService,
+    private encryptionService: EncryptionService,
   ) {}
 
   async getProfile(userId: string) {
@@ -43,34 +45,45 @@ export class UsersService {
     });
 
     if (!user) throw new NotFoundException('User not found');
+
+    if (user.farmerProfile?.kisanCreditCard) {
+      user.farmerProfile.kisanCreditCard = this.encryptionService.decrypt(user.farmerProfile.kisanCreditCard);
+    }
+
     return user;
   }
 
   async updateProfile(userId: string, dto: UpdateProfileDto) {
-    const updated = await this.prisma.user.update({
-      where: { id: userId },
-      data: {
-        name: dto.name,
-        preferredLanguage: dto.preferredLanguage,
-        farmerProfile: {
-          upsert: {
-            create: {
-              village: dto.village || 'Kalyanpur',
-              pincode: dto.pincode || '756001',
-              landHoldingAcres: dto.landHoldingAcres || 2.5,
-              kisanCreditCard: dto.kisanCreditCard,
-            },
-            update: {
-              village: dto.village,
-              pincode: dto.pincode,
-              landHoldingAcres: dto.landHoldingAcres,
-              kisanCreditCard: dto.kisanCreditCard,
-            },
+    const data: any = {
+      name: dto.name,
+      preferredLanguage: dto.preferredLanguage,
+      farmerProfile: {
+        upsert: {
+          create: {
+            village: dto.village || 'Kalyanpur',
+            pincode: dto.pincode || '756001',
+            landHoldingAcres: dto.landHoldingAcres || 2.5,
+            kisanCreditCard: dto.kisanCreditCard ? this.encryptionService.encrypt(dto.kisanCreditCard) : undefined,
+          },
+          update: {
+            village: dto.village,
+            pincode: dto.pincode,
+            landHoldingAcres: dto.landHoldingAcres,
+            kisanCreditCard: dto.kisanCreditCard ? this.encryptionService.encrypt(dto.kisanCreditCard) : undefined,
           },
         },
       },
+    };
+
+    const updated = await this.prisma.user.update({
+      where: { id: userId },
+      data,
       include: { farmerProfile: true },
     });
+
+    if (updated.farmerProfile?.kisanCreditCard) {
+      updated.farmerProfile.kisanCreditCard = this.encryptionService.decrypt(updated.farmerProfile.kisanCreditCard);
+    }
 
     return updated;
   }

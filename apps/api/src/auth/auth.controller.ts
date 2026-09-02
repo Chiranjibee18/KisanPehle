@@ -6,12 +6,12 @@ import { JwtAuthGuard } from '../common/jwt-auth.guard';
 export class AuthController {
   constructor(private authService: AuthService) {}
 
-  @Post('send-otp')
+  @Post(['send-otp', 'otp/send'])
   async sendOtp(@Body('mobile') mobile: string) {
     return this.authService.sendOtp(mobile);
   }
 
-  @Post('verify-otp')
+  @Post(['verify-otp', 'otp/verify'])
   async verifyOtp(@Body() dto: VerifyOtpDto) {
     return this.authService.verifyOtp(dto);
   }

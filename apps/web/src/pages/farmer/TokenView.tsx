@@ -22,6 +22,7 @@ import { AudioButton } from '../../components/ui/AudioButton';
 import { ApiClient } from '../../services/api';
 import { OfflineCacheService } from '../../services/offlineCache';
 import { socketService } from '../../services/socket';
+import { subscribeToMandiQueue } from '../../services/supabaseClient';
 import { getCropDisplayName } from '../../utils/cropUtils';
 
 export const TokenView: React.FC = () => {
@@ -47,6 +48,21 @@ export const TokenView: React.FC = () => {
         setLastUpdated(new Date().toLocaleTimeString());
       }
     });
+
+    // 4. Supabase Realtime Channel
+    let unsubRealtime: (() => void) | undefined;
+    if (cached?.centerId) {
+      unsubRealtime = subscribeToMandiQueue(cached.centerId, (data) => {
+        if (data?.specificTokenDetails) {
+          setQueueData(data.specificTokenDetails);
+          setLastUpdated(new Date().toLocaleTimeString());
+        }
+      });
+    }
+
+    return () => {
+      if (unsubRealtime) unsubRealtime();
+    };
   }, []);
 
   const refreshData = async () => {

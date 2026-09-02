@@ -19,8 +19,8 @@ export const FarmerAuth: React.FC = () => {
   const [error, setError] = useState('');
   const [demoOtpHint, setDemoOtpHint] = useState('');
 
-  const handleSendOtp = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSendOtp = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
     setError('');
     if (!/^\d{10}$/.test(mobile)) {
       setError(t('auth.error_invalid_mobile'));
@@ -45,8 +45,8 @@ export const FarmerAuth: React.FC = () => {
   const handleVerifyOtp = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
-    if (!otp || otp.length < 4) {
-      setError(t('auth.error_invalid_otp'));
+    if (!otp || otp.length < 6) {
+      setError(t('auth.error_invalid_otp') || 'Please enter the complete 6-digit OTP.');
       return;
     }
 
@@ -159,7 +159,7 @@ export const FarmerAuth: React.FC = () => {
           </form>
         ) : (
           <form onSubmit={handleVerifyOtp} className="space-y-4">
-            <div className="p-3.5 bg-kisan-50 dark:bg-kisan-950/90 rounded-xl border border-kisan-300 dark:border-kisan-700 text-xs text-kisan-950 dark:text-kisan-200 space-y-1">
+            <div className="p-3.5 bg-kisan-50 dark:bg-kisan-950/90 rounded-xl border border-kisan-300 dark:border-kisan-700 text-xs text-kisan-950 dark:text-kisan-200 space-y-1.5">
               <div className="flex justify-between items-center">
                 <span>{t('auth.otp_sent_to')} <strong className="font-bold">+91-{mobile}</strong></span>
                 <button
@@ -171,8 +171,13 @@ export const FarmerAuth: React.FC = () => {
                 </button>
               </div>
               {demoOtpHint && (
-                <div className="text-xs text-stone-700 dark:text-stone-300 font-medium">
-                  {t('auth.verification_otp')} <strong className="font-mono text-kisan-900 dark:text-kisan-200 font-bold">{demoOtpHint}</strong>
+                <div className="p-2 bg-amber-50 dark:bg-amber-950/60 rounded-lg border border-amber-200 dark:border-amber-800/60 flex items-center justify-between">
+                  <span className="text-[11px] font-bold text-amber-900 dark:text-amber-200">
+                    🌾 Demo SMS OTP:
+                  </span>
+                  <span className="font-mono text-sm font-black text-amber-950 dark:text-amber-100 tracking-wider">
+                    {demoOtpHint}
+                  </span>
                 </div>
               )}
             </div>
@@ -192,6 +197,20 @@ export const FarmerAuth: React.FC = () => {
               />
             </div>
 
+            <div className="flex items-center justify-between text-xs pt-1">
+              <span className="text-stone-500 dark:text-stone-400">
+                Didn't receive code?
+              </span>
+              <button
+                type="button"
+                disabled={loading}
+                onClick={() => handleSendOtp()}
+                className="font-bold text-kisan-700 dark:text-kisan-400 hover:underline cursor-pointer"
+              >
+                Resend OTP
+              </button>
+            </div>
+
             <Button
               type="submit"
               variant="primary"
@@ -202,6 +221,10 @@ export const FarmerAuth: React.FC = () => {
             >
               {t('auth.verify_otp_btn')}
             </Button>
+
+            <div className="text-[11px] text-center text-stone-500 dark:text-stone-400 flex items-center justify-center gap-1.5 pt-1">
+              <span>🛡️ Protected by AES-256-GCM & Row Level Security</span>
+            </div>
           </form>
         )}
 

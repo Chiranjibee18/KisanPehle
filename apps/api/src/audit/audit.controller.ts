@@ -29,4 +29,25 @@ export class AuditController {
       data: logs,
     };
   }
+
+  @Get('chain')
+  @Roles('AUDITOR', 'DISTRICT_ADMIN', 'STATE_ADMIN', 'SUPER_ADMIN')
+  getAuditChain() {
+    const chain = this.auditService.getAuditChain();
+    return {
+      success: true,
+      count: chain.length,
+      data: chain,
+    };
+  }
+
+  @Get('verify-integrity')
+  @Roles('AUDITOR', 'DISTRICT_ADMIN', 'STATE_ADMIN', 'SUPER_ADMIN')
+  verifyAuditIntegrity() {
+    const report = this.auditService.verifyAuditIntegrity();
+    return {
+      success: true,
+      data: report,
+    };
+  }
 }

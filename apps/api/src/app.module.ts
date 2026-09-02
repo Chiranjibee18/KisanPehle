@@ -17,6 +17,8 @@ import { AiModule } from './ai/ai.module';
 import { VoiceModule } from './voice/voice.module';
 import { IvrModule } from './ivr/ivr.module';
 import { AdminModule } from './admin/admin.module';
+import { IntelligenceModule } from './intelligence/intelligence.module';
+import { GrievanceModule } from './grievance/grievance.module';
 
 @Module({
   imports: [
@@ -37,6 +39,8 @@ import { AdminModule } from './admin/admin.module';
     VoiceModule,
     IvrModule,
     AdminModule,
+    IntelligenceModule,
+    GrievanceModule,
   ],
   controllers: [AppController],
 })

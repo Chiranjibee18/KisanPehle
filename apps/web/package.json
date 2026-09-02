@@ -10,6 +10,7 @@
     "test:i18n": "node scripts/validate-i18n.js"
   },
   "dependencies": {
+    "@supabase/supabase-js": "^2.112.4",
     "canvas-confetti": "^1.9.3",
     "clsx": "^2.1.1",
     "lucide-react": "^0.381.0",

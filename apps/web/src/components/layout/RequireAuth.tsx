@@ -29,12 +29,38 @@ export const RequireAuth: React.FC<RequireAuthProps> = ({ children, allowedRoles
   }
 
   if (allowedRoles && !allowedRoles.includes(user?.role || '')) {
-    // If logged in as farmer trying to access officer, redirect to /farmer
-    if (user?.role === 'FARMER') return <Navigate to="/farmer" replace />;
-    if (user?.role === 'OFFICER') return <Navigate to="/officer" replace />;
-    if (user?.role === 'DISTRICT_ADMIN' || user?.role === 'STATE_ADMIN') return <Navigate to="/admin" replace />;
-    if (user?.role === 'AUDITOR') return <Navigate to="/auditor" replace />;
-    return <Navigate to="/auth" replace />;
+    const returnPath = user?.role === 'FARMER' ? '/farmer' : user?.role === 'OFFICER' ? '/officer' : user?.role === 'AUDITOR' ? '/auditor' : '/auth';
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-stone-50 dark:bg-stone-950 px-4">
+        <div className="max-w-md w-full p-8 bg-white dark:bg-stone-900 border-2 border-red-200 dark:border-red-900/50 rounded-2xl shadow-xl text-center space-y-4">
+          <div className="w-16 h-16 bg-red-100 dark:bg-red-950/80 text-red-700 dark:text-red-400 rounded-full flex items-center justify-center text-2xl font-black mx-auto">
+            🛡️
+          </div>
+          <div className="space-y-1">
+            <span className="text-xs font-black uppercase tracking-widest text-red-800 dark:text-red-400">
+              403 Forbidden
+            </span>
+            <h1 className="text-xl font-black text-stone-900 dark:text-white">
+              Access Denied
+            </h1>
+            <p className="text-sm font-semibold text-stone-600 dark:text-stone-300">
+              You don't have permission to access this page.
+            </p>
+          </div>
+          <p className="text-xs text-stone-500 dark:text-stone-400">
+            Logged in as <strong className="text-stone-800 dark:text-stone-200 font-bold">{user?.role}</strong> (+91-{user?.mobile}). Role-based access control is actively enforced by Row Level Security.
+          </p>
+          <div className="pt-2">
+            <a
+              href={returnPath}
+              className="inline-block w-full py-3 px-4 bg-kisan-600 hover:bg-kisan-700 text-white font-bold rounded-xl text-sm transition-colors shadow-sm"
+            >
+              Return to Your Dashboard
+            </a>
+          </div>
+        </div>
+      </div>
+    );
   }
 
   return <>{children}</>;

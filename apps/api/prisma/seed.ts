@@ -1,7 +1,22 @@
 import { PrismaClient } from '@prisma/client';
 import * as bcrypt from 'bcryptjs';
+import * as crypto from 'crypto';
 
 const prisma = new PrismaClient();
+
+const encryptionKey = Buffer.from(
+  process.env.ENCRYPTION_KEY || 'IPBw2WVmtfTSNQcnZK5RPid8exEE3cNBcXN1YBaHd1k=',
+  'base64',
+);
+
+function encryptSensitiveField(plaintext: string): string {
+  const iv = crypto.randomBytes(12);
+  const cipher = crypto.createCipheriv('aes-256-gcm', encryptionKey, iv);
+  let enc = cipher.update(plaintext, 'utf8', 'base64');
+  enc += cipher.final('base64');
+  const authTag = cipher.getAuthTag().toString('base64');
+  return `enc:v1:${iv.toString('base64')}:${authTag}:${enc}`;
+}
 
 async function main() {
   console.log('🌾 Starting Kisan Pehele Database Seeding ("Pehle pata, phir mandi.")...');
@@ -42,7 +57,7 @@ async function main() {
         create: {
           aadhaarLast4: '8821',
           landHoldingAcres: 3.5,
-          kisanCreditCard: 'KCC-OD-7560-9921',
+          kisanCreditCard: encryptSensitiveField('KCC-OD-7560-9921'),
           village: 'Kalyanpur',
           pincode: '756001',
         },
@@ -63,7 +78,7 @@ async function main() {
         create: {
           aadhaarLast4: '4192',
           landHoldingAcres: 2.0,
-          kisanCreditCard: 'KCC-OD-7560-3342',
+          kisanCreditCard: encryptSensitiveField('KCC-OD-7560-3342'),
           village: 'Remuna Block',
           pincode: '756019',
         },
@@ -84,7 +99,7 @@ async function main() {
         create: {
           aadhaarLast4: '6743',
           landHoldingAcres: 4.8,
-          kisanCreditCard: 'KCC-OD-7560-1188',
+          kisanCreditCard: encryptSensitiveField('KCC-OD-7560-1188'),
           village: 'Basta Block',
           pincode: '756029',
         },
@@ -105,7 +120,7 @@ async function main() {
         create: {
           aadhaarLast4: '3319',
           landHoldingAcres: 2.2,
-          kisanCreditCard: 'KCC-OD-7560-5512',
+          kisanCreditCard: encryptSensitiveField('KCC-OD-7560-5512'),
           village: 'Jaleswar',
           pincode: '756032',
         },
@@ -126,7 +141,7 @@ async function main() {
         create: {
           aadhaarLast4: '9901',
           landHoldingAcres: 5.5,
-          kisanCreditCard: 'KCC-OD-7560-8804',
+          kisanCreditCard: encryptSensitiveField('KCC-OD-7560-8804'),
           village: 'Soro Rural',
           pincode: '756045',
         },
@@ -147,7 +162,7 @@ async function main() {
         create: {
           aadhaarLast4: '5562',
           landHoldingAcres: 3.0,
-          kisanCreditCard: 'KCC-OD-7560-7733',
+          kisanCreditCard: encryptSensitiveField('KCC-OD-7560-7733'),
           village: 'Nilagiri',
           pincode: '756040',
         },

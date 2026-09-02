@@ -13,6 +13,7 @@ export const IvrSimulator: React.FC = () => {
   const [callerNumber, setCallerNumber] = useState('9876543210');
   const [callActive, setCallActive] = useState(false);
   const [ivrStep, setIvrStep] = useState('LANGUAGE');
+  const [ivrLanguage, setIvrLanguage] = useState('hi');
   const [ivrText, setIvrText] = useState('');
   const [ivrOptions, setIvrOptions] = useState<any[]>([]);
   const [callHistory, setCallHistory] = useState<string[]>([]);
@@ -26,19 +27,24 @@ export const IvrSimulator: React.FC = () => {
   const fetchSmsLogs = async () => {
     try {
       const res = await ApiClient.getSmsLogs();
-      if (res.data) setSmsLogs(res.data);
-    } catch (e) {}
+      if (res && res.data) setSmsLogs(res.data);
+      else if (Array.isArray(res)) setSmsLogs(res);
+    } catch (e) {
+      console.error(e);
+    }
   };
 
   const startCall = async () => {
     setCallActive(true);
     setLoading(true);
+    setIvrStep('LANGUAGE');
+    setIvrLanguage('hi');
     try {
       const res = await ApiClient.simulateIvr({
         callerNumber,
         step: 'LANGUAGE',
       });
-      if (res.data) {
+      if (res && res.data) {
         setIvrStep(res.data.step);
         setIvrText(res.data.responseText);
         setIvrOptions(res.data.options || []);
@@ -49,6 +55,7 @@ export const IvrSimulator: React.FC = () => {
       console.error(e);
     } finally {
       setLoading(false);
+      fetchSmsLogs();
     }
   };
 
@@ -59,19 +66,24 @@ export const IvrSimulator: React.FC = () => {
       const res = await ApiClient.simulateIvr({
         callerNumber,
         step: ivrStep,
+        language: ivrLanguage,
         dtmfDigit: digit,
       });
-      if (res.data) {
+      if (res && res.data) {
         setIvrStep(res.data.step);
+        if (res.data.language) setIvrLanguage(res.data.language);
         setIvrText(res.data.responseText);
         setIvrOptions(res.data.options || []);
         setCallHistory((prev) => [...prev, `[Keypad: ${digit}]`, res.data.responseText]);
-        speak(res.data.responseText, res.data.language || 'hi');
+        speak(res.data.responseText, res.data.language || ivrLanguage);
+
+        // Fetch refreshed SMS logs immediately
+        fetchSmsLogs();
 
         if (res.data.isEnded) {
           setTimeout(() => {
             setCallActive(false);
-          }, 4000);
+          }, 5000);
         }
       }
     } catch (e) {
