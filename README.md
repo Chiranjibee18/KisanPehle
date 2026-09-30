@@ -4,7 +4,7 @@ A multilingual, farmer-first procurement transparency and queue intelligence pla
 
 ![Kisan Pehele website preview](packages/shared-types/image.png)
 
-## Overview
+## Overview                                         -
 
 Kisan Pehele helps farmers avoid wasted trips, long waits, and uncertainty at procurement centers. The platform combines live mandi status, queue estimates, booking flow, digital token tracking, and transparent payment visibility into one user-friendly experience.
 
