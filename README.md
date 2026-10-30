@@ -79,7 +79,7 @@ KisanPehle/
 
 ## Quick start
 
-1. Install dependencies:
+1. Install dependencies:    
 
    ```bash
    npm install
